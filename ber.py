@@ -21,7 +21,7 @@ def calculate_ber(original_bits, decoded_bits):
     ber = errors / len(original_bits)
     return ber
 
-def simulate_isi(signal, channel_response=np.array([1.,.1,.05,0,0,-0.11])):
+def simulate_isi(signal, channel_response):
     """ISI effect of channel, with timeshift so input and output are aligned
         
         Args:
@@ -51,23 +51,34 @@ def main():
     snr_range = np.linspace(0, 10, 11)  # range of SNR values
     ber = np.zeros(len(snr_range))
     ber_isi = np.zeros(len(snr_range))
+    ber_ffe = np.zeros(len(snr_range))
 
     np.random.seed(0) 
     bits = np.random.randint(0, 2, N)  # generate random bits
     signal = nrz_encode(bits)  # encode the bits using NRZ
     for i in range(len(snr_range)):
-        isi_signal = simulate_isi(signal,np.array([1.,.1,.05,0,-0.15]))
-        noisy_signal = add_noise(isi_signal, 10 ** (snr_range[i] / 10))  # add noise to simulate lossy channel
-        decoded_bits = nrz_decode(noisy_signal)  # decode the noisy signal using NRZ
-        ber_isi[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
 
         noisy_signal = add_noise(signal, 10 ** (snr_range[i] / 10))  # add noise to simulate lossy channel
+        isi_signal = simulate_isi(noisy_signal,np.array([1.,.1,.05,0,-0.15]))
+
         decoded_bits = nrz_decode(noisy_signal)  # decode the noisy signal using NRZ
         ber[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
+
+        decoded_bits = nrz_decode(isi_signal)  # decode the noisy signal using NRZ
+        ber_isi[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
+
+        ffe_signal = simulate_isi(isi_signal,[1.,-.10,-0.05])
+        decoded_bits = nrz_decode(ffe_signal)  # decode the noisy signal using NRZ
+        ber_ffe[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
+
+
+
+
 
 
     plt.semilogy(snr_range, ber,label='baseline')
     plt.semilogy(snr_range, ber_isi, label='isi')
+    plt.semilogy(snr_range, ber_ffe, label='ffe')
     plt.xlabel('SNR (dB)')
     plt.ylabel('BER')
     plt.title('SNR vs BER for NRZ link over a lossy channel')
