@@ -58,8 +58,9 @@ def main():
     signal = nrz_encode(bits)  # encode the bits using NRZ
     for i in range(len(snr_range)):
 
-        noisy_signal = add_noise(signal, 10 ** (snr_range[i] / 10))  # add noise to simulate lossy channel
-        isi_signal = simulate_isi(noisy_signal,np.array([1.,.1,.05,0,-0.15]))
+        noise_power = 10 ** (snr_range[i] / 10)
+        noisy_signal = add_noise(signal, noise_power)  # add noise to simulate lossy channel
+        isi_signal = add_noise(simulate_isi(signal,np.array([1.,.5,.2,0,-0.15])),noise_power)
 
         decoded_bits = nrz_decode(noisy_signal)  # decode the noisy signal using NRZ
         ber[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
@@ -67,7 +68,7 @@ def main():
         decoded_bits = nrz_decode(isi_signal)  # decode the noisy signal using NRZ
         ber_isi[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
 
-        ffe_signal = simulate_isi(isi_signal,[1.,-.10,-0.05])
+        ffe_signal = simulate_isi(isi_signal,[1.,-.5,+.05,+.08])
         decoded_bits = nrz_decode(ffe_signal)  # decode the noisy signal using NRZ
         ber_ffe[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
 
