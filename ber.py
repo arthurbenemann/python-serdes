@@ -47,7 +47,7 @@ def simulate_isi(signal, channel_response):
     return output_signal
 
 def ffe(signal, taps):
-    return simulate_isi(signal,np.insert(taps, 0, 1))
+    return simulate_isi(signal,taps)
 
 def dfe(signal, taps):
     tap_length = len(taps)
@@ -96,7 +96,7 @@ def main():
         noisy_isi_signal = add_noise(isi_signal,noise_power)
 
         # Equalization, 
-        ffe_signal = ffe(noisy_isi_signal, [-.5,+.05,+.08])
+        ffe_signal = ffe(noisy_isi_signal, [1,-.5,+.05,+.08])
         dfe_signal = dfe(noisy_isi_signal,[.5,.2,0,-.15])
 
         # Detectors and BER calculation
@@ -107,8 +107,8 @@ def main():
 
     # Plotting
     plt.semilogy(snr_range, ber_raw, label='raw')
-    plt.semilogy(snr_range, ber_dfe, label='dfe')
-    plt.semilogy(snr_range, ber_ffe, label='ffe')
+    plt.semilogy(snr_range, ber_dfe, label='dfe-4tap')
+    plt.semilogy(snr_range, ber_ffe, label='ffe-4tap')
     plt.semilogy(snr_range, ber_isi, label='isi')
     plt.xlabel('SNR (dB)')
     plt.ylabel('BER')
