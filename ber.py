@@ -49,41 +49,65 @@ def simulate_isi(signal, channel_response):
 def ffe(signal, taps):
     return simulate_isi(signal,np.insert(taps, 0, 1))
 
+def dfe(signal, taps):
+    tap_length = len(taps)
+
+    feedback = np.zeros(tap_length)  # feedback buffer
+
+    dfe_signal = np.zeros_like(signal)
+
+    for i in range(len(signal)):
+
+        # apply DFE equalization based on previous symbols detected
+        dfe_signal[i]= signal[i] - np.dot(feedback,taps)
+
+        # detect the current symbol  
+        detected_symbol = nrz_decode(dfe_signal[i])
+        
+        # update feedback buffer accordingly
+        feedback = np.roll(feedback, 1)
+        feedback[0] = nrz_encode(detected_symbol)
+
+    return dfe_signal
+
 def main():
-    N = int(1e6)  # number of bits
-    snr_range = np.linspace(0, 10, 11)  # range of SNR values
-    ber = np.zeros(len(snr_range))
+    # Simulation paramenters
+    N = int(1e5)  # number of bits
+    snr_range = np.linspace(0, 10, 6)  # range of SNR values
+
+    ber_raw = np.zeros(len(snr_range))
     ber_isi = np.zeros(len(snr_range))
     ber_ffe = np.zeros(len(snr_range))
 
-    np.random.seed(0) 
+    # Transmit Signal
+    np.random.seed(0)   # lock seed for repeatable results 
     bits = np.random.randint(0, 2, N)  # generate random bits
     signal = nrz_encode(bits)  # encode the bits using NRZ
+
+
+    # SNR simulations
     for i in range(len(snr_range)):
 
+        # Channel simultation
         noise_power = 10 ** (snr_range[i] / 10)
-        noisy_signal = add_noise(signal, noise_power)  # add noise to simulate lossy channel
+        noisy_signal = add_noise(signal, noise_power)                       
         isi_signal = simulate_isi(signal,np.array([1.,.5,.2,0,-0.15]))
         noisy_isi_signal = add_noise(isi_signal,noise_power)
 
-        decoded_bits = nrz_decode(noisy_signal)  # decode the noisy signal using NRZ
-        ber[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
-
-        decoded_bits = nrz_decode(noisy_isi_signal)  # decode the noisy signal using NRZ
-        ber_isi[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
-
+        # Equalization, 
         ffe_signal = ffe(noisy_isi_signal, [-.5,+.05,+.08])
-        decoded_bits = nrz_decode(ffe_signal)  # decode the noisy signal using NRZ
-        ber_ffe[i] = calculate_ber(bits, decoded_bits)  # calculate BER for current SNR
+        
 
+        # Detectors and BER calculation
+        ber_raw[i] = calculate_ber(bits, nrz_decode(noisy_signal) )  # calculate BER for current SNR
+        ber_isi[i] = calculate_ber(bits, nrz_decode(noisy_isi_signal)  )  # calculate BER for current SNR
+        ber_ffe[i] = calculate_ber(bits, nrz_decode(ffe_signal))  # calculate BER for current SNR
+        
 
-
-
-
-
-    plt.semilogy(snr_range, ber,label='baseline')
+    # Plotting
     plt.semilogy(snr_range, ber_isi, label='isi')
     plt.semilogy(snr_range, ber_ffe, label='ffe')
+    plt.semilogy(snr_range, ber_raw, label='raw')
     plt.xlabel('SNR (dB)')
     plt.ylabel('BER')
     plt.title('SNR vs BER for NRZ link over a lossy channel')
