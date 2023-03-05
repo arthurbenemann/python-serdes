@@ -78,6 +78,7 @@ def main():
     ber_raw = np.zeros(len(snr_range))
     ber_isi = np.zeros(len(snr_range))
     ber_ffe = np.zeros(len(snr_range))
+    ber_dfe = np.zeros(len(snr_range))
 
     # Transmit Signal
     np.random.seed(0)   # lock seed for repeatable results 
@@ -96,18 +97,19 @@ def main():
 
         # Equalization, 
         ffe_signal = ffe(noisy_isi_signal, [-.5,+.05,+.08])
-        
+        dfe_signal = dfe(noisy_isi_signal,[.5,.2,0,-.15])
 
         # Detectors and BER calculation
         ber_raw[i] = calculate_ber(bits, nrz_decode(noisy_signal) )  # calculate BER for current SNR
         ber_isi[i] = calculate_ber(bits, nrz_decode(noisy_isi_signal)  )  # calculate BER for current SNR
         ber_ffe[i] = calculate_ber(bits, nrz_decode(ffe_signal))  # calculate BER for current SNR
-        
+        ber_dfe[i] = calculate_ber(bits, nrz_decode(dfe_signal))  # calculate BER for current SNR
 
     # Plotting
-    plt.semilogy(snr_range, ber_isi, label='isi')
-    plt.semilogy(snr_range, ber_ffe, label='ffe')
     plt.semilogy(snr_range, ber_raw, label='raw')
+    plt.semilogy(snr_range, ber_dfe, label='dfe')
+    plt.semilogy(snr_range, ber_ffe, label='ffe')
+    plt.semilogy(snr_range, ber_isi, label='isi')
     plt.xlabel('SNR (dB)')
     plt.ylabel('BER')
     plt.title('SNR vs BER for NRZ link over a lossy channel')
