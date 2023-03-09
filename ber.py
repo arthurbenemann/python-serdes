@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import timeit
+from tqdm import tqdm
 
 def nrz_encode(bits):
     signal = np.where(bits == 1, 1, -1)
@@ -72,7 +73,7 @@ def dfe(signal, taps):
 
 def main():
     # Simulation paramenters
-    N = int(1e5)  # number of bits
+    N = int(1e6)  # number of bits
     snr_range = np.linspace(0, 10, 6)  # range of SNR values
 
     ber_raw = np.zeros(len(snr_range))
@@ -87,7 +88,7 @@ def main():
 
 
     # SNR simulations
-    for i in range(len(snr_range)):
+    for i in tqdm(range(len(snr_range))):
 
         # Channel simultation
         noise_power = 10 ** (snr_range[i] / 10)
@@ -113,8 +114,8 @@ def main():
     plt.xlabel('SNR (dB)')
     plt.ylabel('BER')
     plt.title('SNR vs BER for NRZ link over a lossy channel')
-    plt.grid(b=True, which='major',  linestyle='-')
-    plt.grid(b=True, which='minor', color='dimgrey', linestyle='--')
+    plt.grid(which='major',  linestyle='-')
+    plt.grid(which='minor', color='dimgrey', linestyle='--')
     plt.legend()
     plt.show()
 
