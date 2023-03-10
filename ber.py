@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import timeit
 from tqdm import tqdm
 
 def nrz_encode(bits):
