@@ -36,3 +36,12 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+
+    - name: Generate Image
+      run: python ber.py
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: generated-image
+        path: snr_vs_ber.png
