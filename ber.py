@@ -145,8 +145,8 @@ def mlse(signal, channel_response, traceback_length):
 
 def main():
     # Simulation paramenters
-    N = int(1e5)  # number of bits
-    steps = 10
+    N = int(1e6)  # number of bits
+    steps = 11
     snr_range = np.linspace(0, 10, steps)  # range of SNR values
 
     ber_raw = np.zeros(len(snr_range))
@@ -159,6 +159,7 @@ def main():
     np.random.seed(0)   # lock seed for repeatable results
     bits = np.random.randint(0, 2, N)  # generate random bits
     signal = nrz_encode(bits)  # encode the bits using NRZ
+    channel = np.array([1., .6, .4,0.2,0.1,0.0, -0.1,0,0,0,0,0,0,.3,-.2])
     channel_inv = inverse_filter(channel)
 
     # Received signal at each SNR
@@ -197,7 +198,7 @@ def main():
     plt.grid(which='minor', color='dimgrey', linestyle='--')
     plt.legend()
     plt.savefig('snr_vs_ber.png')
-    plt.show()
+    #plt.show()
 
 
 main()
