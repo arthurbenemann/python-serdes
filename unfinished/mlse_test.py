@@ -99,7 +99,7 @@ np.set_printoptions(precision=1, suppress=True,
 np.random.seed(0)   # lock seed for repeatable results
 o = np.where(np.random.randint(0, 2, 100) == 1, 1, -1)  # generate random bits
 # o = np.array([1, 1,  1, 1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-h = np.array([1, 0.8, 0.2, 0])
+h = np.array([1, 0.8, 0.2])
 r2 = np.convolve(o, h)
 
 traceback = 10
