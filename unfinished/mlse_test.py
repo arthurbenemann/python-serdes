@@ -23,48 +23,35 @@ def mlse(signal, channel_response, traceback_length):
     # initialize memory for loop
     state_metrics = np.zeros(K)
     path_mem = np.zeros((traceback_length, K), dtype=bool)
-    detections = []
+    detections = np.zeros_like(signal).astype(int)
 
     # run through samples
-    for sample in signal:
+    for i in range(len(signal)):
 
-        # double the vector by replicating end-to-end
-        previous_state_metrics = np.tile(state_metrics, 2)
+        # Calculate Branch metrics (negative transitions followed by positive)
+        branch_metrics = np.abs(decoder_trellis - signal[i])
 
-        # Calculate Branch metrics
-        branch_metrics = np.abs(decoder_trellis - sample)
+        # Add - Compare - Select
+        metric = np.tile(state_metrics, 2) + branch_metrics
 
-        # Add
-        metric = previous_state_metrics + branch_metrics
-
-        # Compare
         even = metric[::2]
         odd = metric[1::2]
         decisions = odd < even
 
-        # Select
         state_metrics = np.where(decisions, odd, even)  # select lower metric
 
         # Update path memmory
         path_mem = np.roll(path_mem, 1, axis=0)
         path_mem[0, :] = decisions
 
-        # Find most likely path
-        likely_state = np.argmin(state_metrics)
+        # Traceback with path mem starting from most likely state
+        likely = np.argmin(state_metrics)
 
         for test in path_mem:
-            traceback_decision = int(test[likely_state])
-            likely_state = transition_matrix[likely_state, traceback_decision]
+            likely = transition_matrix[likely, int(test[likely])]
 
         # decide bit based on oldest state on likely path
-        bit = likely_state >= K/2
-        detections = np.append(detections, bit)
-
-        # debug
-        # print(lowblue(np.transpose(state_metrics)),
-        #       lowblue(branch_metrics), bit)
-        # print(path_mem)
-        # print()
+        detections[i] = (likely >= K/2)
     return detections
 
 
@@ -73,13 +60,12 @@ np.set_printoptions(precision=1, suppress=True,
 
 
 np.random.seed(0)   # lock seed for repeatable results
-o = np.where(np.random.randint(0, 2, 100) == 1, 1, -1)  # generate random bits
-# o = np.array([1, 1,  1, 1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-h = np.array([1, -1,2,1,3,2,0.1])
+o = np.where(np.random.randint(0, 2, 200) == 1, 1, -1)  # generate random bits
+h = np.array([1, -1, 2, 1, 3, 2, 0.1, 2, 3, -5, 4])
 r2 = np.convolve(o, h)
-r2 += np.random.normal(0, 1.0, len(r2))  # noise
+r2 += np.random.normal(0, 5, len(r2))  # noise
 
-traceback = 10
+traceback = len(h)*3
 detections = mlse(r2, h, traceback)
 
 
@@ -87,6 +73,6 @@ transmitted = (o > 0).astype(int)
 received = detections[traceback:].astype(int)
 errors = (received != transmitted[:len(received)]).astype(int)
 
-print(transmitted)
-print(received)
+# print(transmitted)
+# print(received)
 print(errors, '\t errors:', np.sum(errors))
