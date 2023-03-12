@@ -1,3 +1,6 @@
+# How I learned to love the trellis - Signal Processing Magazine, IEEE
+# https://www.ece.ucdavis.edu/~bbaas/281/notes/Handout.viterbi.pdf
+
 import numpy as np
 from itertools import product
 import matplotlib.pyplot as plt
@@ -152,34 +155,33 @@ def main():
     signal = nrz_encode(bits)  # encode the bits using NRZ
     channel = np.array([1., .9, .5, 0.2, -0.15])
 
+    # Received signal at each SNR
+    received_signal = []
     for i in tqdm(range(len(snr_range)), desc='ideal', unit_scale=N//1e3, unit='kbit'):
-        received_signal = channel_sim(signal, np.ones(1), snr_range[i])
-        ber_raw[i] = calculate_ber(bits, nrz_decode(received_signal))
+        received_signal.append(channel_sim(signal, channel, snr_range[i]))      
+        received_signal_no_isi = channel_sim(signal, np.ones(1), snr_range[i])
+        ber_raw[i] = calculate_ber(bits, nrz_decode(received_signal_no_isi))      
 
     for i in tqdm(range(len(snr_range)), desc='isi', unit_scale=N//1e3, unit='kbit'):
-        received_signal = channel_sim(signal, channel, snr_range[i])
-        ber_isi[i] = calculate_ber(bits, nrz_decode(received_signal))
+        ber_isi[i] = calculate_ber(bits, nrz_decode(received_signal[i]))
 
     for i in tqdm(range(len(snr_range)), desc='ffe', unit_scale=N//1e3, unit='kbit'):
-        received_signal = channel_sim(signal, channel, snr_range[i])
-        ffe_signal = ffe(received_signal, [1, -.5, +.05, +.08])
+        ffe_signal = ffe(received_signal[i], [1, -.5, +.05, +.08])
         ber_ffe[i] = calculate_ber(bits, nrz_decode(ffe_signal))
 
     for i in tqdm(range(len(snr_range)), desc='dfe', unit_scale=N//1e3, unit='kbit'):
-        received_signal = channel_sim(signal, channel, snr_range[i])
-        dfe_signal = dfe(received_signal, [.9, .5, 0.2, -0.15])
+        dfe_signal = dfe(received_signal[i], [.9, .5, 0.2, -0.15])
         ber_dfe[i] = calculate_ber(bits, nrz_decode(dfe_signal))
 
     for i in tqdm(range(len(snr_range)), desc='mlse', unit_scale=N//1e3, unit='kbit'):
-        received_signal = channel_sim(signal, channel, snr_range[i])
         traceback = len(channel)*5
-        mlse_detections = mlse(received_signal, channel, traceback)[traceback:]
+        mlse_detections = mlse(received_signal[i], channel, traceback)[traceback:]
         ber_mlse[i] = calculate_ber(bits[:len(mlse_detections)], mlse_detections)
 
     # Plotting
     plt.semilogy(snr_range, ber_raw, label='ideal', linestyle='--')
-    plt.semilogy(snr_range, ber_dfe, label='dfe-4tap')
-    plt.semilogy(snr_range, ber_ffe, label='ffe-4tap')
+    plt.semilogy(snr_range, ber_dfe, label='dfe')
+    plt.semilogy(snr_range, ber_ffe, label='ffe')
     plt.semilogy(snr_range, ber_isi, label='isi')
     plt.semilogy(snr_range, ber_mlse, label='mlse')
     plt.xlabel('SNR (dB)')
@@ -188,7 +190,8 @@ def main():
     plt.grid(which='major',  linestyle='-')
     plt.grid(which='minor', color='dimgrey', linestyle='--')
     plt.legend()
-    plt.savefig('snr_vs_ber.png')
+    plt.show()
+    #plt.savefig('snr_vs_ber.png')
 
 
 main()
