@@ -42,9 +42,6 @@ def simulate_isi(signal, channel_response):
         channel_response (ndarray): Impulse response of the channel. Example lossy channel used if omitted
     """
 
-    # Normalize channel response
-    channel_response /= np.linalg.norm(channel_response)
-
     # Find the index of the peak in the channel response.
     peak_index = np.argmax(np.abs(channel_response))
 
