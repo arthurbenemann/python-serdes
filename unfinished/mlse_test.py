@@ -7,26 +7,22 @@ from itertools import product
 
 def mlse(signal, channel_response, traceback_length):
 
-    channel_length = len(channel_response)
+    # K: number of states in channel state machine
+    length = len(channel_response)
+    K = 2**(length-1)
 
-    # Generate all possible transmitted sequences
-    m = np.array(list(product([-1, 1], repeat=3))).reshape((8, 3))
+    # all possible transmitted sequences (considering n,n-1,n-2)
+    m = np.array(list(product([-1, 1], repeat=length))).reshape((K*2, length))
 
-    # branch metrics considering n,n-1,n-2 indexing to messages
+    # decoder treliss, based on ideal channel response to each message
     decoder_trellis = np.dot(m, channel_response)
 
-    # transition matrix
-    transition_matrix = np.array([[0, 1], [2, 3], [0, 1], [2, 3]])
+    # transition matrix[previous state,decision] = previous_state
+    transition_matrix = np.tile(np.arange(K), 2).reshape((K, 2))
 
-    K = 2**(len(channel_response)-1)   # number of states
-
-    # Γ same as the number of states = len(channel)
+    # initialize memory for loop
     state_metrics = np.zeros(K)
-
-    # each row is a path ?
     path_mem = np.zeros((traceback_length, K), dtype=bool)
-
-    # detected signal
     detections = []
 
     # run through samples
@@ -42,13 +38,12 @@ def mlse(signal, channel_response, traceback_length):
         metric = previous_state_metrics + branch_metrics
 
         # Compare
-        even_metrics = metric[::2]
-        odd_metrics = metric[1::2]
-        decisions = odd_metrics < even_metrics
+        even = metric[::2]
+        odd = metric[1::2]
+        decisions = odd < even
 
         # Select
-        state_metrics = np.where(
-            decisions, odd_metrics, even_metrics)  # select lower metric
+        state_metrics = np.where(decisions, odd, even)  # select lower metric
 
         # Update path memmory
         path_mem = np.roll(path_mem, 1, axis=0)
@@ -73,27 +68,8 @@ def mlse(signal, channel_response, traceback_length):
     return detections
 
 
-def lowblue(vector):
-    # format the numbers in the vector with 1 decimal place and leading zeros
-    formatted_vector = [f"{num:0>.1f}" for num in vector]
-
-    # find the index of the lowest value
-    min_index = np.argmin(vector)
-
-    # create a string with ANSI escape codes to print in blue
-    blue_text = "\033[34m{}\033[0m".format(formatted_vector[min_index])
-
-    # replace the lowest value in the vector with the blue text
-    formatted_vector[min_index] = blue_text
-
-    # join the formatted numbers into a string and return it
-    return "[" + " ".join(formatted_vector) + "]"
-
-
 np.set_printoptions(precision=1, suppress=True,
                     floatmode='fixed', linewidth=250)
-
-# path memmory
 
 
 np.random.seed(0)   # lock seed for repeatable results
