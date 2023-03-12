@@ -144,6 +144,7 @@ def main():
     ber_isi = np.zeros(len(snr_range))
     ber_ffe = np.zeros(len(snr_range))
     ber_dfe = np.zeros(len(snr_range))
+    ber_mlse = np.zeros(len(snr_range))
 
     # Transmit Signal
     np.random.seed(0)   # lock seed for repeatable results
@@ -169,11 +170,18 @@ def main():
         dfe_signal = dfe(received_signal, [.9, .5, 0.2, -0.15])
         ber_dfe[i] = calculate_ber(bits, nrz_decode(dfe_signal))
 
+    for i in tqdm(range(len(snr_range)), desc='mlse', unit_scale=N//1e3, unit='kbit'):
+        received_signal = channel_sim(signal, channel, snr_range[i])
+        traceback = len(channel)*5
+        mlse_detections = mlse(received_signal, channel, traceback)[traceback:]
+        ber_mlse[i] = calculate_ber(bits[:len(mlse_detections)], mlse_detections)
+
     # Plotting
-    plt.semilogy(snr_range, ber_raw, label='ideal')
+    plt.semilogy(snr_range, ber_raw, label='ideal', linestyle='--')
     plt.semilogy(snr_range, ber_dfe, label='dfe-4tap')
     plt.semilogy(snr_range, ber_ffe, label='ffe-4tap')
     plt.semilogy(snr_range, ber_isi, label='isi')
+    plt.semilogy(snr_range, ber_mlse, label='mlse')
     plt.xlabel('SNR (dB)')
     plt.ylabel('BER')
     plt.title('SNR vs BER for NRZ link over a lossy channel')
