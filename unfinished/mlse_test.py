@@ -66,10 +66,10 @@ def mlse(signal, channel_response, traceback_length):
         detections = np.append(detections, bit)
 
         # debug
-        print(lowblue(np.transpose(state_metrics)),
-              lowblue(branch_metrics), bit)
-        print(path_mem)
-        print()
+        # print(lowblue(np.transpose(state_metrics)),
+        #       lowblue(branch_metrics), bit)
+        # print(path_mem)
+        # print()
     return detections
 
 
@@ -99,15 +99,16 @@ np.set_printoptions(precision=1, suppress=True,
 np.random.seed(0)   # lock seed for repeatable results
 o = np.where(np.random.randint(0, 2, 100) == 1, 1, -1)  # generate random bits
 # o = np.array([1, 1,  1, 1, 1, 1, -1, -1, -1, -1, -1, -1, 1, -1, -1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-h = np.array([1, 0.8, 0.2])
+h = np.array([1, 0.8, 0.2, 0])
 r2 = np.convolve(o, h)
 
-detections = mlse(r2, h, 4)
+traceback = 10
+detections = mlse(r2, h, traceback)
 
 
 transmitted = (o > 0).astype(int)
-received = detections[4:].astype(int)
-errors = (received != transmitted[:-2]).astype(int)
+received = detections[traceback:].astype(int)
+errors = (received != transmitted[:len(received)]).astype(int)
 
 print(transmitted)
 print(received)
