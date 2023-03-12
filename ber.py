@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import product
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -84,6 +85,56 @@ def dfe(signal, taps):
         feedback[0] = nrz_encode(detected_symbol)
 
     return dfe_signal
+
+
+def mlse(signal, channel_response, traceback_length):
+
+    # K: number of states in channel state machine
+    length = len(channel_response)
+    K = 2**(length-1)
+
+    # all possible transmitted sequences (considering n,n-1,n-2)
+    m = np.array(list(product([-1, 1], repeat=length))).reshape((K*2, length))
+
+    # decoder treliss, based on ideal channel response to each message
+    decoder_trellis = np.dot(m, channel_response)
+
+    # transition matrix[previous state,decision] = previous_state
+    transition_matrix = np.tile(np.arange(K), 2).reshape((K, 2))
+
+    # initialize memory for loop
+    state_metrics = np.zeros(K)
+    path_mem = np.zeros((traceback_length, K), dtype=bool)
+    detections = np.zeros_like(signal).astype(int)
+
+    # run through samples
+    for i in range(len(signal)):
+
+        # Calculate Branch metrics (negative transitions followed by positive)
+        branch_metrics = np.abs(decoder_trellis - signal[i])
+
+        # Add - Compare - Select
+        metric = np.tile(state_metrics, 2) + branch_metrics
+
+        even = metric[::2]
+        odd = metric[1::2]
+        decisions = odd < even
+
+        state_metrics = np.where(decisions, odd, even)  # select lower metric
+
+        # Update path memmory
+        path_mem = np.roll(path_mem, 1, axis=0)
+        path_mem[0, :] = decisions
+
+        # Traceback with path mem starting from most likely state
+        likely = np.argmin(state_metrics)
+
+        for test in path_mem:
+            likely = transition_matrix[likely, int(test[likely])]
+
+        # decide bit based on oldest state on likely path
+        detections[i] = (likely >= K/2)
+    return detections
 
 
 def main():
