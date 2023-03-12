@@ -60,6 +60,12 @@ def simulate_isi(signal, channel_response):
 
     return output_signal
 
+def inverse_filter(h):
+    H = np.fft.fft(h)
+    H_inv = np.conj(H) / (H * np.conj(H))
+    h_inv = np.fft.ifft(H_inv)
+    return np.real(h_inv)
+
 
 def ffe(signal, taps):
     return simulate_isi(signal, taps)
@@ -153,7 +159,7 @@ def main():
     np.random.seed(0)   # lock seed for repeatable results
     bits = np.random.randint(0, 2, N)  # generate random bits
     signal = nrz_encode(bits)  # encode the bits using NRZ
-    channel = np.array([1., .9, .5, 0.2, -0.15])
+    channel_inv = inverse_filter(channel)
 
     # Received signal at each SNR
     received_signal = []
@@ -166,7 +172,7 @@ def main():
         ber_isi[i] = calculate_ber(bits, nrz_decode(received_signal[i]))
 
     for i in tqdm(range(len(snr_range)), desc='ffe', unit_scale=N//1e3, unit='kbit'):
-        ffe_signal = ffe(received_signal[i], [1, -.5, +.05, +.08])
+        ffe_signal = ffe(received_signal[i], channel_inv)
         ber_ffe[i] = calculate_ber(bits, nrz_decode(ffe_signal))
 
     for i in tqdm(range(len(snr_range)), desc='dfe', unit_scale=N//1e3, unit='kbit'):
@@ -192,7 +198,6 @@ def main():
     plt.legend()
     plt.savefig('snr_vs_ber.png')
     plt.show()
-    #plt.savefig('snr_vs_ber.png')
 
 
 main()
