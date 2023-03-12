@@ -170,7 +170,7 @@ def main():
         ber_ffe[i] = calculate_ber(bits, nrz_decode(ffe_signal))
 
     for i in tqdm(range(len(snr_range)), desc='dfe', unit_scale=N//1e3, unit='kbit'):
-        dfe_signal = dfe(received_signal[i], [.9, .5, 0.2, -0.15])
+        dfe_signal = dfe(received_signal[i], channel[1:])
         ber_dfe[i] = calculate_ber(bits, nrz_decode(dfe_signal))
 
     for i in tqdm(range(len(snr_range)), desc='mlse', unit_scale=N//1e3, unit='kbit'):
@@ -190,6 +190,7 @@ def main():
     plt.grid(which='major',  linestyle='-')
     plt.grid(which='minor', color='dimgrey', linestyle='--')
     plt.legend()
+    plt.savefig('snr_vs_ber.png')
     plt.show()
     #plt.savefig('snr_vs_ber.png')
 
