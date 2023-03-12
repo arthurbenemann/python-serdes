@@ -60,6 +60,7 @@ def simulate_isi(signal, channel_response):
 
     return output_signal
 
+
 def inverse_filter(h):
     H = np.fft.fft(h)
     H_inv = np.conj(H) / (H * np.conj(H))
@@ -159,15 +160,16 @@ def main():
     np.random.seed(0)   # lock seed for repeatable results
     bits = np.random.randint(0, 2, N)  # generate random bits
     signal = nrz_encode(bits)  # encode the bits using NRZ
-    channel = np.array([1., .6, .4,0.2,0.1,0.0, -0.1,0,0,0,0,0,0,.3,-.2])
+    channel = np.array([1., .6, .4, 0.2, 0.1, 0.0, -
+                       0.1, 0, 0, 0, 0, 0, 0, .3, -.2])
     channel_inv = inverse_filter(channel)
 
     # Received signal at each SNR
     received_signal = []
     for i in tqdm(range(len(snr_range)), desc='ideal', unit_scale=N//1e3, unit='kbit'):
-        received_signal.append(channel_sim(signal, channel, snr_range[i]))      
+        received_signal.append(channel_sim(signal, channel, snr_range[i]))
         received_signal_no_isi = channel_sim(signal, np.ones(1), snr_range[i])
-        ber_raw[i] = calculate_ber(bits, nrz_decode(received_signal_no_isi))      
+        ber_raw[i] = calculate_ber(bits, nrz_decode(received_signal_no_isi))
 
     for i in tqdm(range(len(snr_range)), desc='isi', unit_scale=N//1e3, unit='kbit'):
         ber_isi[i] = calculate_ber(bits, nrz_decode(received_signal[i]))
@@ -182,8 +184,8 @@ def main():
 
     for i in tqdm(range(len(snr_range)), desc='mlse', unit_scale=N//1e3, unit='kbit'):
         traceback = len(channel)*5
-        mlse_detections = mlse(received_signal[i], channel, traceback)[traceback:]
-        ber_mlse[i] = calculate_ber(bits[:len(mlse_detections)], mlse_detections)
+        mlse_det = mlse(received_signal[i], channel, traceback)[traceback:]
+        ber_mlse[i] = calculate_ber(bits[:len(mlse_det)], mlse_det)
 
     # Plotting
     plt.semilogy(snr_range, ber_raw, label='ideal', linestyle='--')
@@ -198,7 +200,7 @@ def main():
     plt.grid(which='minor', color='dimgrey', linestyle='--')
     plt.legend()
     plt.savefig('snr_vs_ber.png')
-    #plt.show()
+    # plt.show()
 
 
 main()
