@@ -179,11 +179,6 @@ def sim(N, channel, snr, jobs):
     snr_range = np.linspace(0, snr, snr+1)  # range of SNR values
     n_sims = len(snr_range)
 
-    ber_raw = np.zeros(n_sims)
-    ber_isi = np.zeros(n_sims)
-    ber_ffe = np.zeros(n_sims)
-    ber_dfe = np.zeros(n_sims)
-    ber_mlse = np.zeros(n_sims)
 
     # Transmit Signal
     np.random.seed(0)   # lock seed for repeatable results
@@ -192,6 +187,7 @@ def sim(N, channel, snr, jobs):
 
     # Received signal at each SNR
     received_signal = []
+    ber_raw = np.zeros(n_sims)
     for i in range(n_sims):
         received_signal.append(channel_sim(signal, channel, snr_range[i]))
         received_signal_no_isi = channel_sim(signal, np.ones(1), snr_range[i])
