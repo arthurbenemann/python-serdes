@@ -19,7 +19,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--long","-snr=10","-n=0.5e6","--multi-thread"]
+            "args": ["--long","-snr=10","-n=3e6","--multi-thread"]
         }
     
     ]

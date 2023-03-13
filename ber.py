@@ -161,7 +161,7 @@ def dfe_run(channel, received_signal, bits):
 
 
 def mlse_run(channel, received_signal, bits):
-    traceback = len(channel)*5
+    traceback = len(channel)*3
     mlse_det = mlse(received_signal, channel, traceback)[traceback:]
     return calculate_ber(bits[:len(mlse_det)], mlse_det)
 
@@ -220,7 +220,7 @@ def sim(N, channel, snr, jobs):
 
 
 parser = argparse.ArgumentParser(
-    description='Simulate channel and plot BER for different equalization methods/n Example usage: $ber.py --long -snr=10 -n=1e6 --multi-thread ')
+    description='Simulate channel and plot BER for different equalization methods/n Example usage: $ber.py --long -snr=10 -n=3e6 --multi-thread ')
 
 parser.add_argument('channel', type=float, nargs='*',
                     help='Channel impulse response (default: [1., 0.5, -.2])', default=[1., 0.5, -.2])
