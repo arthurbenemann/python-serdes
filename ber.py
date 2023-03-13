@@ -41,13 +41,6 @@ def calculate_ber(original_bits, decoded_bits):
 
 
 def simulate_isi(signal, channel_response):
-    """ISI effect of channel, with timeshift so input and output are aligned
-
-        Args:
-        signal (ndarray): Input signal to be transmitted over the channel.
-        channel_response (ndarray): Impulse response of the channel. Example lossy channel used if omitted
-    """
-
     # Find the index of the peak in the channel response.
     peak_index = np.argmax(np.abs(channel_response))
 
@@ -178,7 +171,6 @@ def sim(N, channel, snr, jobs):
     # Simulation paramenters
     snr_range = np.linspace(0, snr, snr+1)  # range of SNR values
     n_sims = len(snr_range)
-
 
     # Transmit Signal
     np.random.seed(0)   # lock seed for repeatable results
