@@ -5,7 +5,9 @@ import numpy as np
 from itertools import product
 import matplotlib.pyplot as plt
 from tqdm import trange
+from pqdm.processes import pqdm
 import argparse
+import psutil
 
 
 def nrz_encode(bits):
@@ -150,7 +152,28 @@ def trange_bits(n_sims, N, desc):
     return trange(n_sims, desc=desc, unit_scale=N//1e3, unit='kbit', bar_format=bar_format)
 
 
-def sim(N, channel, snr):
+def isi_run(channel, received_signal, bits):
+    return calculate_ber(bits, nrz_decode(received_signal))
+
+
+def ffe_run(channel, received_signal, bits):
+    channel_inv = inverse_filter(channel)
+    ffe_signal = ffe(received_signal, channel_inv)
+    return calculate_ber(bits, nrz_decode(ffe_signal))
+
+
+def dfe_run(channel, received_signal, bits):
+    dfe_signal = dfe(received_signal, channel[1:])
+    return calculate_ber(bits, nrz_decode(dfe_signal))
+
+
+def mlse_run(channel, received_signal, bits):
+    traceback = len(channel)*5
+    mlse_det = mlse(received_signal, channel, traceback)[traceback:]
+    return calculate_ber(bits[:len(mlse_det)], mlse_det)
+
+
+def sim(N, channel, snr, jobs):
 
     # Simulation paramenters
     snr_range = np.linspace(0, snr, snr+1)  # range of SNR values
@@ -166,7 +189,6 @@ def sim(N, channel, snr):
     np.random.seed(0)   # lock seed for repeatable results
     bits = np.random.randint(0, 2, N)  # generate random bits
     signal = nrz_encode(bits)  # encode the bits using NRZ
-    channel_inv = inverse_filter(channel)
 
     # Received signal at each SNR
     received_signal = []
@@ -175,21 +197,23 @@ def sim(N, channel, snr):
         received_signal_no_isi = channel_sim(signal, np.ones(1), snr_range[i])
         ber_raw[i] = calculate_ber(bits, nrz_decode(received_signal_no_isi))
 
-    for i in trange_bits(n_sims, N, 'isi'):
-        ber_isi[i] = calculate_ber(bits, nrz_decode(received_signal[i]))
+    bar = "{desc:<26.25}{percentage:3.0f}%|{bar:40}{r_bar}"
+    unit = N//1e3
+    args = []
+    for i in range(n_sims):
+        args.append((channel, received_signal[i], bits))
 
-    for i in trange_bits(n_sims, N, 'ffe'):
-        ffe_signal = ffe(received_signal[i], channel_inv)
-        ber_ffe[i] = calculate_ber(bits, nrz_decode(ffe_signal))
+    ber_isi = pqdm(args, isi_run, n_jobs=jobs, argument_type='args',
+                   unit_scale=unit, unit='kbit', desc='isi', bar_format=bar)
 
-    for i in trange_bits(n_sims, N, 'dfe'):
-        dfe_signal = dfe(received_signal[i], channel[1:])
-        ber_dfe[i] = calculate_ber(bits, nrz_decode(dfe_signal))
+    ber_ffe = pqdm(args, ffe_run, n_jobs=jobs, argument_type='args',
+                   unit_scale=unit, unit='kbit', desc='ffe', bar_format=bar)
 
-    for i in trange_bits(n_sims, N, 'mlse'):
-        traceback = len(channel)*5
-        mlse_det = mlse(received_signal[i], channel, traceback)[traceback:]
-        ber_mlse[i] = calculate_ber(bits[:len(mlse_det)], mlse_det)
+    ber_dfe = pqdm(args, dfe_run, n_jobs=jobs, argument_type='args',
+                   unit_scale=unit, unit='kbit', desc='dfe', bar_format=bar)
+
+    ber_mlse = pqdm(args, mlse_run, n_jobs=jobs, argument_type='args',
+                    unit_scale=unit, unit='kbit', desc='mlse', bar_format=bar)
 
     # Plotting
     plt.semilogy(snr_range, ber_raw, label='ideal', linestyle='--')
@@ -208,7 +232,7 @@ def sim(N, channel, snr):
 
 
 parser = argparse.ArgumentParser(
-    description='Simulate channel and plot BER for different equalization methods/n Example usage: $python3 ber.py -snr=10 -n=1e6 1 .6 .4 .2 .1 0 -.1 0 0 0 .3 -.2')
+    description='Simulate channel and plot BER for different equalization methods/n Example usage: $ber.py --long -snr=10 -n=1e6 --multi-thread ')
 
 parser.add_argument('channel', type=float, nargs='*',
                     help='Channel impulse response (default: [1., 0.5, -.2])', default=[1., 0.5, -.2])
@@ -218,6 +242,9 @@ parser.add_argument('-snr',  type=int, nargs='?',
                     help='Simulate to up to SNR value (default:6)', default=6)
 parser.add_argument('--long', action='store_true',
                     help='use a long channel [1 .6 .4 .2 .1 0 -.1 0 0 0 .3 -.2]')
+parser.add_argument('--multi-thread', action='store_true',
+                    help='use mutithreading on simulation, max threads in cpu used')
+
 args = parser.parse_args()
 
 if args.long:
@@ -225,4 +252,8 @@ if args.long:
 else:
     channel = np.array(args.channel)
 
-sim(int(args.n), channel, args.snr)
+if args.multi_thread:
+    n_jobs = psutil.cpu_count()
+else:
+    n_jobs = 1
+sim(int(args.n), channel, args.snr, n_jobs)
