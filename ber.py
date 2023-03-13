@@ -4,7 +4,8 @@
 import numpy as np
 from itertools import product
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+from tqdm import trange
+import argparse
 
 
 def nrz_encode(bits):
@@ -144,45 +145,48 @@ def mlse(signal, channel_response, traceback_length):
     return detections
 
 
-def main():
-    # Simulation paramenters
-    N = int(1e6)  # number of bits
-    steps = 11
-    snr_range = np.linspace(0, 10, steps)  # range of SNR values
+def trange_bits(n_sims, N, desc):
+    bar_format = "{desc:<6.5}{percentage:3.0f}%|{bar:40}{r_bar}"
+    return trange(n_sims, desc=desc, unit_scale=N//1e3, unit='kbit', bar_format=bar_format)
 
-    ber_raw = np.zeros(len(snr_range))
-    ber_isi = np.zeros(len(snr_range))
-    ber_ffe = np.zeros(len(snr_range))
-    ber_dfe = np.zeros(len(snr_range))
-    ber_mlse = np.zeros(len(snr_range))
+
+def sim(N, channel, snr):
+
+    # Simulation paramenters
+    snr_range = np.linspace(0, snr, snr+1)  # range of SNR values
+    n_sims = len(snr_range)
+
+    ber_raw = np.zeros(n_sims)
+    ber_isi = np.zeros(n_sims)
+    ber_ffe = np.zeros(n_sims)
+    ber_dfe = np.zeros(n_sims)
+    ber_mlse = np.zeros(n_sims)
 
     # Transmit Signal
     np.random.seed(0)   # lock seed for repeatable results
     bits = np.random.randint(0, 2, N)  # generate random bits
     signal = nrz_encode(bits)  # encode the bits using NRZ
-    channel = np.array([1., .6, .4, 0.2, 0.1, 0.0, -
-                       0.1, 0, 0, 0, 0, 0, 0, .3, -.2])
     channel_inv = inverse_filter(channel)
 
     # Received signal at each SNR
     received_signal = []
-    for i in tqdm(range(len(snr_range)), desc='ideal', unit_scale=N//1e3, unit='kbit'):
+    for i in range(n_sims):
         received_signal.append(channel_sim(signal, channel, snr_range[i]))
         received_signal_no_isi = channel_sim(signal, np.ones(1), snr_range[i])
         ber_raw[i] = calculate_ber(bits, nrz_decode(received_signal_no_isi))
 
-    for i in tqdm(range(len(snr_range)), desc='isi', unit_scale=N//1e3, unit='kbit'):
+    for i in trange_bits(n_sims, N, 'isi'):
         ber_isi[i] = calculate_ber(bits, nrz_decode(received_signal[i]))
 
-    for i in tqdm(range(len(snr_range)), desc='ffe', unit_scale=N//1e3, unit='kbit'):
+    for i in trange_bits(n_sims, N, 'ffe'):
         ffe_signal = ffe(received_signal[i], channel_inv)
         ber_ffe[i] = calculate_ber(bits, nrz_decode(ffe_signal))
 
-    for i in tqdm(range(len(snr_range)), desc='dfe', unit_scale=N//1e3, unit='kbit'):
+    for i in trange_bits(n_sims, N, 'dfe'):
         dfe_signal = dfe(received_signal[i], channel[1:])
         ber_dfe[i] = calculate_ber(bits, nrz_decode(dfe_signal))
 
-    for i in tqdm(range(len(snr_range)), desc='mlse', unit_scale=N//1e3, unit='kbit'):
+    for i in trange_bits(n_sims, N, 'mlse'):
         traceback = len(channel)*5
         mlse_det = mlse(received_signal[i], channel, traceback)[traceback:]
         ber_mlse[i] = calculate_ber(bits[:len(mlse_det)], mlse_det)
@@ -203,4 +207,22 @@ def main():
     # plt.show()
 
 
-main()
+parser = argparse.ArgumentParser(
+    description='Simulate channel and plot BER for different equalization methods/n Example usage: $python3 ber.py -snr=10 -n=1e6 1 .6 .4 .2 .1 0 -.1 0 0 0 .3 -.2')
+
+parser.add_argument('channel', type=float, nargs='*',
+                    help='Channel impulse response (default: [1., 0.5, -.2])', default=[1., 0.5, -.2])
+parser.add_argument('-n', type=float, nargs='?',
+                    help='Number of bits to simulate (default:1e4)', default=int(1e4))
+parser.add_argument('-snr',  type=int, nargs='?',
+                    help='Simulate to up to SNR value (default:6)', default=6)
+parser.add_argument('--long', action='store_true',
+                    help='use a long channel [1 .6 .4 .2 .1 0 -.1 0 0 0 .3 -.2]')
+args = parser.parse_args()
+
+if args.long:
+    channel = np.array([1, .6, .4, .2, .1, 0, -.1, 0, 0, 0, .3, -.2])
+else:
+    channel = np.array(args.channel)
+
+sim(int(args.n), channel, args.snr)
