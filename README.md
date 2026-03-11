@@ -31,6 +31,6 @@ QUEUEING TASKS | mlse     100%|████████████████�
 PROCESSING TASKS | mlse   100%|████████████████████████| 33000.0/33000.0 [15:21<00:00, 35.81kbit/s] 
 COLLECTING RESULTS | mlse 100%|████████████████████████| 33000.0/33000.0 [00:00<00:00, 193312893.85kbit/s 
 ```
-![snr_vs_ber](https://user-images.githubusercontent.com/3289118/224606763-38c311da-201b-46f9-92c5-c5fdb40bf9e5.png)
+![snr_vs_ber](https://github.com/user-attachments/assets/174fd4f2-3fae-4a6b-82e7-ad1d18d3aa5a)
 
 
