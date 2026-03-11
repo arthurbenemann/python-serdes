@@ -21,7 +21,8 @@ def nrz_decode(signal):
 
 
 def add_noise(signal, snr):
-    noise_std = np.sqrt(1 / (2 * snr))
+    signal_power = np.mean(signal**2)
+    noise_std = np.sqrt(signal_power / (2 * snr))
     noise = np.random.normal(0, noise_std, len(signal))
     noisy_signal = signal + noise
     return noisy_signal
