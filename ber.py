@@ -204,10 +204,10 @@ def sim(N, channel, snr, jobs):
                     unit_scale=unit, unit='kbit', desc='mlse', bar_format=bar)
 
     # Plotting
-    plt.semilogy(snr_range, ber_raw, label='ideal', linestyle='--')
-    plt.semilogy(snr_range, ber_dfe, label='dfe')
-    plt.semilogy(snr_range, ber_ffe, label='ffe')
+    plt.semilogy(snr_range, ber_raw, label='no-isi', linestyle='--')
     plt.semilogy(snr_range, ber_isi, label='isi')
+    plt.semilogy(snr_range, ber_ffe, label='ffe')
+    plt.semilogy(snr_range, ber_dfe, label='dfe')
     plt.semilogy(snr_range, ber_mlse, label='mlse')
     plt.xlabel('SNR (dB)')
     plt.ylabel('BER')
